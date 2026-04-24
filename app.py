@@ -153,40 +153,45 @@ elif page == "Predictive Analysis":
     st.subheader("Model Performance")
     st.write("Loaded models will be tested against 20% test data holding stratification principles.")
     
-    model_choice = st.selectbox("Choose a model to view performance:", ["Logistic Regression", "Random Forest", "KNN", "Naive Bayes"])
-    
     model_dict = {
         "Logistic Regression": "log_model_nfl.pkl",
         "Random Forest": "rf_model_nfl.pkl",
         "KNN": "knn_model_nfl.pkl",
         "Naive Bayes": "gnb_model_nfl.pkl"
     }
-    
-    model_file = model_dict[model_choice]
-    
-    try:
-        model = joblib.load(model_file)
-        y_pred = model.predict(xtest)
-        
-        st.text(f"Classification Report for {model_choice}:")
-        st.text(classification_report(ytest, y_pred))
-        
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            cm = confusion_matrix(ytest, y_pred)
-            fig, ax = plt.subplots(figsize=(6,4))
-            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-            ax.set_title(f"{model_choice} Confusion Matrix")
-            ax.set_xlabel('Predicted')
-            ax.set_ylabel('Truth')
-            st.pyplot(fig)
-        
-    except Exception as e:
-        st.error(f"Could not load {model_file}: {e}")
-        
+
+    for model_name, model_file in model_dict.items():
+        st.write(f"### {model_name} Performance")
+        try:
+            model = joblib.load(model_file)
+            y_pred = model.predict(xtest)
+            
+            st.text(f"Classification Report for {model_name}:")
+            st.text(classification_report(ytest, y_pred))
+            
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                cm = confusion_matrix(ytest, y_pred)
+                fig, ax = plt.subplots(figsize=(6,4))
+                sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+                ax.set_title(f"{model_name} Confusion Matrix")
+                ax.set_xlabel('Predicted')
+                ax.set_ylabel('Truth')
+                st.pyplot(fig)
+            
+        except Exception as e:
+            st.error(f"Could not load {model_file}: {e}")
+            
     st.markdown("---")    
     st.subheader("Test the Model (Extra)")
-    st.write(f"Provides real-time predictions using the selected model ({model_choice}).")
+    st.write("Provides real-time predictions using a selected model.")
+    
+    test_model_choice = st.selectbox("Choose a model to test:", ["Logistic Regression", "Random Forest", "KNN", "Naive Bayes"])
+    test_model_file = model_dict[test_model_choice]
+    try:
+        test_model = joblib.load(test_model_file)
+    except:
+        test_model = None
     
     col1, col2 = st.columns(2)
     with col1:
@@ -210,9 +215,9 @@ elif page == "Predictive Analysis":
     }])
     
     if st.button("Predict Success"):
-        try:
-            prediction = model.predict(sample_input)[0]
-            proba = model.predict_proba(sample_input)[0] if hasattr(model, "predict_proba") else None
+        if test_model is not None:
+            prediction = test_model.predict(sample_input)[0]
+            proba = test_model.predict_proba(sample_input)[0] if hasattr(test_model, "predict_proba") else None
             
             if prediction == 1:
                 st.success("Prediction: Top Half Conclusion (Success)")
@@ -221,5 +226,5 @@ elif page == "Predictive Analysis":
                 
             if proba is not None:
                 st.info(f"Confidence: {max(proba)*100:.2f}%")
-        except NameError:
+        else:
              st.error("Model could not be loaded so no prediction is possible.")
